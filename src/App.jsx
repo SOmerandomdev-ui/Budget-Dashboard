@@ -3,13 +3,14 @@ import { useEffect } from 'react'
 import { useRef } from 'react';
 import './App.css'
 import { X } from 'lucide-react';
-import ProcessData from "./components/Data/Data"
+import Table from "./components/Data/Table"
 import Button from '@mui/material/Button';  
 import AddButton from './components/Add-Button'
 import DashBoard from './components/DashBoard'
 
 function App() {
   const [IsAddOpen, setIsAddOpen] = useState(false)
+  const [File, setFile] = useState(null)
   const DownloadRef = useRef(null)
 
   useEffect(() => {
@@ -49,9 +50,14 @@ function App() {
             ref={DownloadRef}
             onChange={(e) => {
               {/* Picks only on file for now */}
-              console.log(ProcessData(e.target.files[0]))
+              const selectedFile = e.target.files[0]
+              if (!selectedFile) return 
+              setFile(selectedFile)
             }}
             />
+            {File && ( 
+              <Table file={File}/>
+            )}
             <Button variant="outlined"
             onClick={() => {
               if (!DownloadRef.current) return;
