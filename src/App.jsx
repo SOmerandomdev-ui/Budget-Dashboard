@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { useRef } from 'react';
 import './App.css'
 import { X } from 'lucide-react';
-import ProcessData from "./components/Data"
+import ProcessData from "./components/Data/Data"
 import Button from '@mui/material/Button';  
 import AddButton from './components/Add-Button'
 import DashBoard from './components/DashBoard'
