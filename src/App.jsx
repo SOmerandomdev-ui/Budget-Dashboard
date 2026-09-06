@@ -38,7 +38,7 @@ function App() {
       {IsAddOpen && ( 
         <> 
           <div className="fixed inset-0 bg-black/60 z-40"> </div>
-          <div className="flex flex-col absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-800 h-[12vh] w-[20vw] z-50">  
+          <div className="flex flex-col absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-800 min-h-[12vh] w-[35vw] z-50">  
             <div className="flex flex-row items-center h-[50%]"> 
               <div className='flex text-white p-4 text-2xl'> Add Your CSV Below </div>
               <X size={50} color="#71717a" onClick={() => {setIsAddOpen(false)}}
