@@ -1,34 +1,58 @@
-import {useState, useEffect, useMemo } from "react"
-import * as Papa from 'papaparse';
-import { useTable, tableFeatures, flexRender,  createColumnHelper } from '@tanstack/react-table';
-import { NotebookPen } from "lucide-react";
+import { useState, useEffect } from "react";
+import * as Papa from "papaparse";
+import {
+  useTable,
+  tableFeatures,
+  flexRender,
+  createColumnHelper,
+  metaHelper,
+} from "@tanstack/react-table";
 
-type Transaction = {
+export type Transaction = {
   date: string;
   description: string;
   debit: number | null;
   credit: number | null;
   balance: number;
-  type: string | null;
+  type: string;
 };
 
-//Converts lists to objects
-function toTransactions(rows: string[][] | null): Transaction[] {
-   if (!rows) return [];
+// Converts raw CSV rows into typed objects
+function ListtoObject(rows: string[][] | null): Transaction[] {
+  if (!rows) return [];
   return rows
-    .filter((row) => row.length === 5 && row[0] !== "") 
+    .filter((row) => row.length === 5 && row[0] !== "")
     .map((row) => ({
       date: row[0],
       description: row[1],
       debit: row[2] ? parseFloat(row[2]) : null,
       credit: row[3] ? parseFloat(row[3]) : null,
       balance: parseFloat(row[4]),
-      type: "Uncategorized"
+      type: "Uncategorized",
     }));
 }
-const features = tableFeatures({});
+
+// Typed meta so cells can call updateType without an `as any` cast
+interface MyTableMeta {
+  updateType: (rowIndex: number, value: string) => void;
+}
+
+const features = tableFeatures({
+  tableMeta: metaHelper<MyTableMeta>(),
+});
+
 const columnHelper = createColumnHelper<typeof features, Transaction>();
 
+const TYPE_OPTIONS = [
+  "Uncategorized",
+  "Groceries",
+  "Gas",
+  "Subscription",
+  "Dining",
+  "Payment",
+];
+
+//Creates columns 
 const columns = columnHelper.columns([
   columnHelper.accessor("date", { header: "Date" }),
   columnHelper.accessor("description", { header: "Description" }),
@@ -48,102 +72,171 @@ const columns = columnHelper.columns([
   }),
   columnHelper.accessor("type", {
     header: "Type",
-      cell: (info) => {
-      const options = ["Uncategorized", "Groceries", "Gas", "Subscription", "Dining", "Payment"];
-
-    return (
-      <select>
-        {options.map((item) => (
-          <option className="bg-zinc-900" key={item} value={item}> {item} </option>
-        ))}
-      </select>
-    );
-  }
-  })
+    cell: (info) => {
+      return (
+        <select
+          aria-label="Transaction category"
+          value={info.getValue()}
+          onChange={(e) => {
+            info.table.options.meta?.updateType(info.row.index, e.target.value);
+          }}
+          className="h-9 min-w-[9.5rem] cursor-pointer rounded-md border border-line bg-ink px-2 text-sm text-paper"
+        >
+          {TYPE_OPTIONS.map((item) => (
+            <option className="bg-ink" key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+      );
+    },
+  }),
 ]);
 
-export default function Table({file}: {file: File} ) {
-  const [TableData, setTableData] = useState<string[][] | null>(null);
+export default function Table({
+  file,
+  callback,
+}: {
+  file: File;
+  callback?: (item: Transaction[]) => void;
+}) {
+  const [rawData, setRawData] = useState<string[][] | null>(null);
+  const [data, setData] = useState<Transaction[]>([]);
 
-  {/* Parse the data into a good format*/}
+  // Parse the uploaded file into raw rows
   useEffect(() => {
-    if (!file) return 
-     let ignore = false
+    if (!file) return;
+    let ignore = false;
 
-     Papa.parse(file, {
-        complete: (results: any) => {
-          if (ignore) return
-          setTableData(results.data)
-          console.log(results.data)
+    Papa.parse(file, {
+      complete: (results: any) => {
+        if (ignore) return;
+        setRawData(results.data as string[][]);
       },
-    })
+    });
 
-    return () => {ignore = true}
-  }, [file])
+    return () => {
+      ignore = true;
+    };
+  }, [file]);
 
-  const data = useMemo(() => toTransactions(TableData), [TableData]);
+  // Reset `data` from the raw rows ONLY when a new file is parsed
+  useEffect(() => {
+    setData(ListtoObject(rawData));
+  }, [rawData]);
 
- const table = useTable({features, data, columns});
-
-
-  console.log(data)
-
+  // Updates App only when a callback is passed (dashboard, not import preview)
+  useEffect(() => {
+    callback?.(data);
+  }, [data, callback]);
   
+  // Called from the `type` column's <select> to edit one row
+  const updateType = (rowIndex: number, value: string) => {
+    setData((old) =>
+      old.map((row, index) =>
+        index === rowIndex ? { ...row, type: value } : row
+      )
+    );
+  };
+
+  const table = useTable({
+    features,
+    data,
+    columns,
+    meta: {
+      updateType,
+    },
+  });
+
+  const rows = table.getRowModel().rows;
+
   return (
-  <div className="h-full overflow-auto max-h-[500px] [scrollbar-width:none] rounded-lg border border-zinc-700 bg-zinc-900">
-    <table className="w-full min-w-[36rem] border-collapse text-left text-sm text-zinc-100">
-      <caption className="sr-only">Account activity</caption>
-      <thead className="sticky top-0 z-10 bg-zinc-900">
-        {table.getHeaderGroups().map((headerGroup) => (
-          <tr key={headerGroup.id} className="border-b border-zinc-700">
-            {headerGroup.headers.map((header) => {
-              const isMoney = header.id === "debit" || header.id === "credit" || header.id === "balance"
-              return (
-              <th
-                key={header.id}
-                scope="col"
-                className={`px-3 py-2.5 text-xs font-medium tracking-wide text-zinc-400 uppercase ${isMoney ? "text-right" : "text-left"}`}
-              >
-                {flexRender(header.column.columnDef.header, header.getContext())}
-              </th>
-              )
-            })}
-          </tr>
-        ))}
-      </thead>
-      <tbody>
-        {table.getRowModel().rows.map((row) => (
-          <tr key={row.id} className="border-b border-zinc-800 last:border-b-0 odd:bg-zinc-900 even:bg-zinc-950/70 hover:bg-zinc-800/80">
-            {row.getAllCells().map((cell) => {
-              const id = cell.column.id
-              const value = cell.getValue()
-              const isEmpty = value == null || value === ""
-              const isMoney = id === "debit" || id === "credit" || id === "balance"
-              const tone =
-                id === "debit" && !isEmpty ? "text-rose-300" :
-                id === "credit" && !isEmpty ? "text-emerald-300" :
-                id === "balance" && typeof value === "number" && value < 0 ? "text-rose-300" :
-                "text-zinc-100"
-              return (
-              <td
-                key={cell.id}
-                className={`px-3 py-2.5 align-middle ${isMoney ? "text-right tabular-nums" : ""} ${id === "date" ? "whitespace-nowrap text-zinc-300 tabular-nums" : ""} ${tone}`}
-              >
-                {isMoney && isEmpty
-                  ? "—"
-                  : id === "debit" && !isEmpty
-                    ? <>− {flexRender(cell.column.columnDef.cell, cell.getContext())}</>
-                    : id === "credit" && !isEmpty
-                      ? <>+ {flexRender(cell.column.columnDef.cell, cell.getContext())}</>
-                      : flexRender(cell.column.columnDef.cell, cell.getContext())}
+    <div className="overflow-auto [scrollbar-width:none] rounded-xl border border-line bg-raised max-h-[min(62vh,40rem)]">
+      <table className="w-full min-w-[36rem] border-collapse text-left font-sans text-sm text-paper">
+        <caption className="sr-only">Account activity</caption>
+        <thead className="sticky top-0 z-10 bg-raised">
+          {table.getHeaderGroups().map((headerGroup) => (
+            <tr key={headerGroup.id} className="border-b border-line">
+              {headerGroup.headers.map((header) => {
+                const isMoney =
+                  header.id === "debit" ||
+                  header.id === "credit" ||
+                  header.id === "balance";
+                return (
+                  <th
+                    key={header.id}
+                    scope="col"
+                    className={`px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-mist ${
+                      isMoney ? "text-right" : "text-left"
+                    }`}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </th>
+                );
+              })}
+            </tr>
+          ))}
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={6} className="px-4 py-10 text-center text-sm text-mist">
+                No transactions found in this file. Check that the CSV has five columns.
               </td>
-              )
-            })}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
-       
+            </tr>
+          ) : (
+            rows.map((row) => (
+              <tr
+                key={row.id}
+                className="border-b border-line/70 last:border-b-0 odd:bg-raised even:bg-ink/40 hover:bg-line/35"
+              >
+                {row.getAllCells().map((cell) => {
+                  const id = cell.column.id;
+                  const value = cell.getValue();
+                  const isEmpty = value == null || value === "";
+                  const isMoney = id === "debit" || id === "credit" || id === "balance";
+                  const tone =
+                    id === "debit" && !isEmpty
+                      ? "text-rust"
+                      : id === "credit" && !isEmpty
+                        ? "text-sea"
+                        : id === "balance" && typeof value === "number" && value < 0
+                          ? "text-rust"
+                          : "text-paper";
+                  return (
+                    <td
+                      key={cell.id}
+                      className={`px-4 py-3 align-middle ${
+                        isMoney ? "text-right font-mono text-[13px] whitespace-nowrap" : ""
+                      } ${id === "date" ? "whitespace-nowrap font-mono text-[13px] text-mist" : ""} ${tone}`}
+                    >
+                      {isMoney && isEmpty
+                        ? "—"
+                        : id === "debit" && !isEmpty
+                          ? <> − {flexRender(cell.column.columnDef.cell, cell.getContext())}</>
+                          : id === "credit" && !isEmpty
+                            ? <> + {flexRender(cell.column.columnDef.cell, cell.getContext())}</>
+                            : flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))
+          )}
+        </tbody>
+        {rows.length > 0 ? (
+          <tfoot>
+            <tr>
+              <td
+                colSpan={6}
+                className="border-t border-line px-4 py-3 text-xs text-mist"
+              >
+                {rows.length} {rows.length === 1 ? "transaction" : "transactions"}
+              </td>
+            </tr>
+          </tfoot>
+        ) : null}
+      </table>
+    </div>
+  );
 }

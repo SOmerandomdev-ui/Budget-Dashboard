@@ -1,18 +1,20 @@
-import { Plus  } from 'lucide-react';
+import { Plus } from "lucide-react";
 
-type AddButtonProps =  {
+type AddButtonProps = {
   className?: string;
   size?: number;
-  Click?: () => void;
-}
+  onClick?: () => void;
+};
 
-export default function AddButton({className, size, Click} : AddButtonProps) {
-    return ( 
-        <button 
-        className={className}
-        onClick={Click}>
-            <Plus  size={size} />
-        </button>
-        
-    )
+export default function AddButton({ className, size = 22, onClick }: AddButtonProps) {
+  return (
+    <button
+      type="button"
+      className={className}
+      onClick={onClick}
+      aria-label="Import CSV"
+    >
+      <Plus size={size} strokeWidth={2} aria-hidden="true" />
+    </button>
+  );
 }

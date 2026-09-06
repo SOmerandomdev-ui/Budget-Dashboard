@@ -1,73 +1,98 @@
-import { useState } from 'react'
-import { useEffect } from 'react'
-import { useRef } from 'react';
-import './App.css'
-import { X } from 'lucide-react';
-import Table from "./components/Data/Table"
-import Button from '@mui/material/Button';  
-import AddButton from './components/Add-Button'
-import DashBoard from './components/DashBoard'
+import { useCallback, useState } from "react";
+import { Upload } from "lucide-react";
+import Table from "./components/Data/Table";
+import AddButton from "./components/Add-Button";
+import DashBoard from "./components/DashBoard";
+import ImportDialog from "./components/ImportDialog";
+import Graph from "./components/Data/Graph"
 
 function App() {
-  const [IsAddOpen, setIsAddOpen] = useState(false)
-  const [File, setFile] = useState(null)
-  const DownloadRef = useRef(null)
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [ledgerFile, setLedgerFile] = useState(null);
+  const [ParsedData, setParsedData] = useState(null)
 
-  useEffect(() => {
-    if (!IsAddOpen) return
-
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') {
-        setIsAddOpen(false);
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [IsAddOpen])
-
+  const closeDialog = useCallback(() => setIsAddOpen(false), []);
 
   return (
-    <div className="relative w-screen h-screen bg bg-zinc-950">
-      {/*Title*/}
-      <DashBoard/>
-      <AddButton size={44} Click={() => {setIsAddOpen(true)}}
-      className="absolute bottom-7 right-7 p-2 border border-zinc-950 rounded-full color-zinc-950 bg-white hover:bg-zinc-500 hover:scale-110 transition-transform duration-200"/>
+    <div className="relative min-h-dvh bg-ink text-paper overflow-hidden">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-raised focus:px-3 focus:py-2"
+      >
+        Skip to ledger
+      </a>
 
-      {/*Add CSV popup*/}
-      {IsAddOpen && ( 
-        <> 
-          <div className="fixed inset-0 bg-black/60 z-40"> </div>
-          <div className="flex flex-col absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-800 min-h-[12vh] w-[35vw] z-50">  
-            <div className="flex flex-row items-center h-[50%]"> 
-              <div className='flex text-white p-4 text-2xl'> Add Your CSV Below </div>
-              <X size={50} color="#71717a" onClick={() => {setIsAddOpen(false)}}
-              className="flex ml-auto pr-5"> </X>
+      <DashBoard />
+      <Graph data={ParsedData}/>
+
+      <main id="main" className="px-4 py-8 pb-24 sm:px-6 ">
+        {ledgerFile ? (
+          <section className="space-y-5 max-w-3xl">
+            <div className="flex w-[100%] flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-brass">
+                  Ledger
+                </p>
+                <h1 className="mt-1 font-display text-4xl tracking-tight">
+                  Account activity
+                </h1>
+                <p className="mt-2 text-sm text-mist">{ledgerFile.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLedgerFile(null)}
+                className="inline-flex h-11 cursor-pointer items-center justify-center rounded-lg border border-line px-4 text-sm text-mist transition-colors duration-200 hover:border-mist/50 hover:text-paper"
+              >
+                Clear statement
+              </button>
+              <div className="w-full"> 
+                <Table file={ledgerFile} callback={setParsedData} />
+              </div>
+              
             </div>
-            <input 
-            type='file'
-            className='absolute opacity-0'
-            ref={DownloadRef}
-            onChange={(e) => {
-              {/* Picks only on file for now */}
-              const selectedFile = e.target.files[0]
-              if (!selectedFile) return 
-              setFile(selectedFile)
-            }}
-            />
-            {File && ( 
-              <Table file={File}/>
-            )}
-            <Button variant="outlined"
-            onClick={() => {
-              if (!DownloadRef.current) return;
-              DownloadRef.current.click()}}
-            className="!flex !flex-col !w-[70%] !self-center"> Click To Add </Button>
-          </div>
-        </>
-      )}
+          </section>
+        ) : (
+          <section className="flex min-h-[calc(100dvh-9rem)] flex-col items-center justify-center text-center">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-brass">
+              Personal ledger
+            </p>
+            <h1 className="mt-3 max-w-xl font-display text-5xl leading-[1.05] tracking-tight sm:text-6xl">
+              Bring your statement aboard.
+            </h1>
+            <p className="mt-4 max-w-md text-base text-mist">
+              Import a bank CSV to review debits, credits, and categories in one
+              quiet table.
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsAddOpen(true)}
+              className="mt-8 inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-brass px-5 text-sm font-medium text-ink transition-opacity duration-200 hover:opacity-90"
+            >
+              <Upload size={16} aria-hidden="true" />
+              Import CSV
+            </button>
+          </section>
+        )}
+      </main>
+
+      {ledgerFile ? (
+        <AddButton
+          size={22}
+          onClick={() => setIsAddOpen(true)}
+          className="fixed right-5 bottom-5 z-20 inline-flex size-12 cursor-pointer items-center justify-center rounded-full bg-paper text-ink shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-colors duration-200 hover:bg-brass"
+        />
+      ) : null}
+      
+      <ImportDialog
+        open={isAddOpen}
+        onClose={closeDialog}
+        onConfirm={(file) => {
+          setLedgerFile(file);
+          setIsAddOpen(false);
+        }}
+      />
     </div>
-  )
+  );
 }
 
 export default App
