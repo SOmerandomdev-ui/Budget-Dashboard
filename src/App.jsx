@@ -10,6 +10,7 @@ function App() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [ledgerFile, setLedgerFile] = useState(null);
   const [ParsedData, setParsedData] = useState(null)
+  console.log(ParsedData)
 
   const closeDialog = useCallback(() => setIsAddOpen(false), []);
 
@@ -22,13 +23,12 @@ function App() {
         Skip to ledger
       </a>
 
-      <DashBoard />
-      <Graph data={ParsedData}/>
+      <DashBoard />      
 
-      <main id="main" className="px-4 py-8 pb-24 sm:px-6 ">
+      <main id="main" className="mx-auto w-full max-w-[80vw] px-4 py-8 pb-24 sm:px-6">
         {ledgerFile ? (
-          <section className="space-y-5 max-w-3xl">
-            <div className="flex w-[100%] flex-wrap items-end justify-between gap-4">
+          <section className="grid w-full min-w-0 grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-start gap-x-8 gap-y-4">
+            <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-brass">
                   Ledger
@@ -41,15 +41,26 @@ function App() {
               <button
                 type="button"
                 onClick={() => setLedgerFile(null)}
-                className="inline-flex h-11 cursor-pointer items-center justify-center rounded-lg border border-line px-4 text-sm text-mist transition-colors duration-200 hover:border-mist/50 hover:text-paper"
+                className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-line px-4 text-sm text-mist transition-colors duration-200 hover:border-mist/50 hover:text-paper"
               >
                 Clear statement
               </button>
-              <div className="w-full"> 
-                <Table file={ledgerFile} callback={setParsedData} />
-              </div>
-              
             </div>
+
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-brass">
+                Chart
+              </p>
+              <h2 className="mt-1 font-display text-4xl tracking-tight">
+                Chart Summary
+              </h2>
+              <p className="mt-2 text-sm invisible select-none" aria-hidden="true">
+                {ledgerFile.name}
+              </p>
+            </div>
+
+            <Table file={ledgerFile} callback={setParsedData} />
+            <Graph data={ParsedData} />
           </section>
         ) : (
           <section className="flex min-h-[calc(100dvh-9rem)] flex-col items-center justify-center text-center">

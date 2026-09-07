@@ -28,7 +28,7 @@ function ListtoObject(rows: string[][] | null): Transaction[] {
       debit: row[2] ? parseFloat(row[2]) : null,
       credit: row[3] ? parseFloat(row[3]) : null,
       balance: parseFloat(row[4]),
-      type: "Uncategorized",
+      type: (row[3] ? parseFloat(row[3]) : null) != null ? "Payment" : "Uncategorized",
     }));
 }
 
@@ -54,6 +54,11 @@ const TYPE_OPTIONS = [
 
 //Creates columns 
 const columns = columnHelper.columns([
+  columnHelper.display({
+    id: "n",
+    header: "No.",
+    cell: (info) => info.row.index + 1,
+  }),
   columnHelper.accessor("date", { header: "Date" }),
   columnHelper.accessor("description", { header: "Description" }),
   columnHelper.accessor("debit", {
@@ -73,6 +78,8 @@ const columns = columnHelper.columns([
   columnHelper.accessor("type", {
     header: "Type",
     cell: (info) => {
+      const isCredit = info.row.original.credit != null;
+      const Options = isCredit ? ["Payment"] : TYPE_OPTIONS
       return (
         <select
           aria-label="Transaction category"
@@ -82,7 +89,7 @@ const columns = columnHelper.columns([
           }}
           className="h-9 min-w-[9.5rem] cursor-pointer rounded-md border border-line bg-ink px-2 text-sm text-paper"
         >
-          {TYPE_OPTIONS.map((item) => (
+          {Options.map((item) => (
             <option className="bg-ink" key={item} value={item}>
               {item}
             </option>
@@ -93,12 +100,7 @@ const columns = columnHelper.columns([
   }),
 ]);
 
-export default function Table({
-  file,
-  callback,
-}: {
-  file: File;
-  callback?: (item: Transaction[]) => void;
+export default function Table({file, callback}: {file: File; callback?: (item: Transaction[]) => void;
 }) {
   const [rawData, setRawData] = useState<string[][] | null>(null);
   const [data, setData] = useState<Transaction[]>([]);
@@ -162,12 +164,13 @@ export default function Table({
                   header.id === "debit" ||
                   header.id === "credit" ||
                   header.id === "balance";
+                const isIndex = header.id === "n";
                 return (
                   <th
                     key={header.id}
                     scope="col"
                     className={`px-4 py-3 text-[11px] font-medium uppercase tracking-[0.14em] text-mist ${
-                      isMoney ? "text-right" : "text-left"
+                      isMoney || isIndex ? "text-right" : "text-left"
                     }`}
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
@@ -180,7 +183,7 @@ export default function Table({
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-4 py-10 text-center text-sm text-mist">
+              <td colSpan={7} className="px-4 py-10 text-center text-sm text-mist">
                 No transactions found in this file. Check that the CSV has five columns.
               </td>
             </tr>
@@ -195,19 +198,24 @@ export default function Table({
                   const value = cell.getValue();
                   const isEmpty = value == null || value === "";
                   const isMoney = id === "debit" || id === "credit" || id === "balance";
+                  const isIndex = id === "n";
                   const tone =
-                    id === "debit" && !isEmpty
-                      ? "text-rust"
-                      : id === "credit" && !isEmpty
-                        ? "text-sea"
-                        : id === "balance" && typeof value === "number" && value < 0
-                          ? "text-rust"
-                          : "text-paper";
+                    isIndex
+                      ? "text-mist"
+                      : id === "debit" && !isEmpty
+                        ? "text-rust"
+                        : id === "credit" && !isEmpty
+                          ? "text-sea"
+                          : id === "balance" && typeof value === "number" && value < 0
+                            ? "text-rust"
+                            : "text-paper";
                   return (
                     <td
                       key={cell.id}
                       className={`px-4 py-3 align-middle ${
-                        isMoney ? "text-right font-mono text-[13px] whitespace-nowrap" : ""
+                        isMoney || isIndex
+                          ? "text-right font-mono text-[13px] whitespace-nowrap"
+                          : ""
                       } ${id === "date" ? "whitespace-nowrap font-mono text-[13px] text-mist" : ""} ${tone}`}
                     >
                       {isMoney && isEmpty
@@ -228,7 +236,7 @@ export default function Table({
           <tfoot>
             <tr>
               <td
-                colSpan={6}
+                colSpan={7}
                 className="border-t border-line px-4 py-3 text-xs text-mist"
               >
                 {rows.length} {rows.length === 1 ? "transaction" : "transactions"}
