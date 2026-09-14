@@ -16,6 +16,7 @@ export default function ImportDialog({ open, onClose, onConfirm }: ImportDialogP
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
+  //Allows Escape key to exit the insert box 
   useEffect(() => {
     if (!open) return;
 
@@ -30,6 +31,7 @@ export default function ImportDialog({ open, onClose, onConfirm }: ImportDialogP
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
+  //Set all the states to null 
   useEffect(() => {
     if (!open) {
       setPendingFile(null);
@@ -38,20 +40,33 @@ export default function ImportDialog({ open, onClose, onConfirm }: ImportDialogP
     }
   }, [open]);
 
+  //Guard against null file uploads for the async 
   if (!open) return null;
 
   function acceptFile(file: File | undefined) {
     if (!file) return;
+    //Check if file is csv 
     const isCsv =
       file.name.toLowerCase().endsWith(".csv") ||
       file.type === "text/csv" ||
       file.type === "application/vnd.ms-excel";
+
     if (!isCsv) {
       setError("Choose a .csv bank statement.");
       return;
     }
+
     setError(null);
     setPendingFile(file);
+
+    //Send file to the backend
+    fetch("http://localhost:3000/api/upload", {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        csv: "date,description,amount\n2026-01-01,Coffee,-4.50"
+  }),
+    }) 
   }
 
   return (

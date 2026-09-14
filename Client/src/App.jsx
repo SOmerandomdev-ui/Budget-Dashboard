@@ -10,7 +10,6 @@ function App() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [ledgerFile, setLedgerFile] = useState(null);
   const [ParsedData, setParsedData] = useState(null)
-  console.log(ParsedData)
 
   const closeDialog = useCallback(() => setIsAddOpen(false), []);
 
@@ -25,7 +24,7 @@ function App() {
 
       <DashBoard />      
 
-      <main id="main" className="mx-auto w-full max-w-[80vw] px-4 py-8 pb-24 sm:px-6">
+      <main id="main" className="mx-auto w-full max-h-[80vh] max-w-[80vw] px-4 py-8 pb-24 sm:px-6">
         {ledgerFile ? (
           <section className="grid w-full min-w-0 grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-start gap-x-8 gap-y-4">
             <div className="flex items-end justify-between gap-4">
