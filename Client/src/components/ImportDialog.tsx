@@ -8,6 +8,28 @@ type ImportDialogProps = {
   onConfirm: (file: File) => void;
 };
 
+//Turns a file objcet into a list of objects with their sections 
+function ParseFile(file: File) {
+
+  //file.text() is a promise since the system reads the csv 
+  return file.text().then(text => {
+    const lines = text.trim().split(/\r?\n/);
+    let mutatedlines = []
+    
+    //Split the items in each section into their own categories e.g. debit, name, credit 
+    for (let i = 0; i < lines.length; i++) {
+      mutatedlines[i] = lines[i].split(",")
+    }
+
+    mutatedlines = mutatedlines.map(row => {
+      const [date, description, debit, credit, balance] = row;
+      return { date, description, debit, credit, balance };
+    });
+
+    return mutatedlines
+  });
+}
+
 export default function ImportDialog({ open, onClose, onConfirm }: ImportDialogProps) {
   const titleId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -43,7 +65,7 @@ export default function ImportDialog({ open, onClose, onConfirm }: ImportDialogP
   //Guard against null file uploads for the async 
   if (!open) return null;
 
-  function acceptFile(file: File | undefined) {
+  async function acceptFile(file: File | undefined) {
     if (!file) return;
     //Check if file is csv 
     const isCsv =
@@ -56,16 +78,19 @@ export default function ImportDialog({ open, onClose, onConfirm }: ImportDialogP
       return;
     }
 
+    //Parses the list and returns the file as a list of object 
+    let CodeList = await ParseFile(file)
+    
     setError(null);
     setPendingFile(file);
 
     //Send file to the backend
     fetch("http://localhost:3000/api/upload", {
       method: "POST",
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        csv: "date,description,amount\n2026-01-01,Coffee,-4.50"
-  }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(CodeList),
     }) 
   }
 
